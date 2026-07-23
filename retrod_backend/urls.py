@@ -16,10 +16,21 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
+
+def root_health_check(request):
+    return JsonResponse({
+        "status": "online",
+        "service": "Retrod PMS AI Chatbot Server",
+        "webhook_url": "/api/v1/integrations/whatsapp/webhook/",
+        "version": "1.0.0"
+    })
 
 urlpatterns = [
+    path("", root_health_check, name="root_health_check"),
     path("admin/", admin.site.urls),
     path("api/v1/integrations/", include("apps.integrations.urls")),
     path("api/v1/core/", include("apps.core.urls")),
 ]
+
 
