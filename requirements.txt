@@ -7,3 +7,4 @@ celery
 groq
 openai
 python-docx
+gunicorn
