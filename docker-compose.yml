@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # 1. Nginx Reverse Proxy Gateway
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - static_volume:/app/static
+      - media_volume:/app/media
+    depends_on:
+      - web
+
+  # 2. Django Backend Application
+  web:
+    build: .
+    command: gunicorn retrod_backend.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - .:/app
+      - static_volume:/app/static
+      - media_volume:/app/media
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  # 3. Celery Worker (Async WhatsApp & AI RAG Tasks)
+  celery_worker:
+    build: .
+    command: celery -A retrod_backend worker -l info
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+
+  # 4. Redis Queue & Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  static_volume:
+  media_volume:

@@ -1,0 +1,9 @@
+django>=5.0
+djangorestframework
+python-dotenv
+twilio
+redis
+celery
+groq
+openai
+python-docx
