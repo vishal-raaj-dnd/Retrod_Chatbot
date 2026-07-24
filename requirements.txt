@@ -8,3 +8,5 @@ groq
 openai
 python-docx
 gunicorn
+dj-database-url
+psycopg2-binary
