@@ -21,6 +21,8 @@ services:
         sync: false
       - key: TWILIO_WHATSAPP_FROM
         value: "whatsapp:+14155238886"
+      - key: TWILIO_CONTENT_SID
+        value: "HXffa2708ffafdb33293c7aa54fb8d02db"
 
 databases:
   - name: retrod-db
