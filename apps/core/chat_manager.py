@@ -4,6 +4,8 @@ from django.db.models import Q
 from groq import Groq
 from openai import OpenAI
 from apps.ai_engine.models import KnowledgeChunk
+from apps.core import pms_api_client
+from apps.integrations.twilio_buttons import get_whatsapp_main_menu
 
 logger = logging.getLogger(__name__)
 
@@ -39,26 +41,37 @@ def search_knowledge_base(query: str, limit: int = 5):
 
 def process_incoming_message(sender_id: str, message: str, profile_name: str, channel: str = "whatsapp") -> str:
     """
-    Processes incoming staff/user messages using stored SRS knowledge & Groq LLM (llama-3.3-70b-versatile).
+    Processes incoming staff/user messages using live PMS API actions, stored SRS knowledge, & Groq LLM.
     """
     if not message:
-        return "Hello! How can I assist you with Retrod PMS today?"
+        return get_whatsapp_main_menu(profile_name)
 
     lowered = message.lower().strip()
 
-    # Greeting check
-    if lowered in ["hi", "hello", "hey", "start", "menu"]:
+    # 1. Main Menu Trigger
+    if lowered in ["hi", "hello", "hey", "start", "menu", "options", "0"]:
+        return get_whatsapp_main_menu(profile_name)
+
+    # 2. Action Handlers (Numbers & Action Triggers)
+    if lowered in ["1", "revenue", "today revenue", "today's revenue", "check revenue"]:
+        return pms_api_client.fetch_today_revenue()
+
+    if lowered in ["2", "occupancy", "room occupancy", "check occupancy"]:
+        return pms_api_client.fetch_room_occupancy()
+
+    if lowered in ["3", "checkins", "today checkins", "today's checkins", "check-in status"]:
+        return pms_api_client.fetch_today_checkins()
+
+    if lowered in ["4", "health", "system health", "pms health", "api health"]:
+        return pms_api_client.fetch_system_health()
+
+    if lowered in ["5", "new reservation link", "new booking"]:
         return (
-            f"👋 Hi {profile_name}! I am the *Retrod PMS AI Assistant*.\n\n"
-            "I am powered by the complete **Retrod PMS Specification & Route Directory**.\n"
-            "Ask me anything about:\n"
-            "• 🌐 *Website Links & Direct Page URLs*\n"
-            "• 🏢 *Staff Workflows & Module Procedures*\n"
-            "• 🏨 *Bookings, Billing & PMS Features*\n\n"
-            "What would you like assistance with?"
+            "To create a new reservation, you need **reservations.create** permission:\n\n"
+            "🔘 *OPEN PAGE:*\nhttps://pms-ui-ten.vercel.app/reservations/new"
         )
 
-    # RAG Retrieval: Fetch relevant SRS and Route knowledge chunks from DB
+    # 3. RAG Retrieval & Groq LLM Synthesis
     relevant_chunks = search_knowledge_base(message, limit=5)
     context_text = "\n\n".join([f"--- [{c.title}] ---\n{c.content}" for c in relevant_chunks])
 
@@ -77,7 +90,7 @@ def process_incoming_message(sender_id: str, message: str, profile_name: str, ch
         f"Retrod PMS Knowledge Context:\n{context_text}"
     )
 
-    # 1. Primary Engine: Groq (llama-3.3-70b-versatile)
+    # Groq LLM (llama-3.3-70b-versatile)
     if groq_api_key:
         try:
             client = Groq(api_key=groq_api_key)
@@ -94,7 +107,7 @@ def process_incoming_message(sender_id: str, message: str, profile_name: str, ch
         except Exception as e:
             logger.error(f"Error calling Groq API: {e}")
 
-    # 2. Fallback Engine: OpenAI
+    # OpenAI Fallback
     if openai_api_key:
         try:
             client = OpenAI(api_key=openai_api_key)
@@ -110,7 +123,7 @@ def process_incoming_message(sender_id: str, message: str, profile_name: str, ch
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {e}")
 
-    # 3. Fallback: Direct SRS Chunk snippet
+    # Chunk Snippet Fallback
     top_chunk = relevant_chunks[0] if relevant_chunks else None
     if top_chunk:
         return (

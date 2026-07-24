@@ -16,8 +16,11 @@ from apps.core.chat_manager import process_incoming_message
 
 def run_test():
     test_queries = [
-        "where can I create a new reservation?",
-        "give me the link for check in"
+        "hi",
+        "1",
+        "2",
+        "3",
+        "4"
     ]
 
     for query in test_queries:
