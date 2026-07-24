@@ -16,7 +16,7 @@ services:
       - key: PMS_BACKEND_URL
         value: "https://pms-backend-wp9b.onrender.com"
       - key: PMS_USERNAME
-        value: "aarav"
+        value: "aarav@grandpalace.in"
       - key: PMS_PASSWORD
         value: "123456"
       - key: GROQ_API_KEY
