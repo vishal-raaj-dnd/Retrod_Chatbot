@@ -1,21 +1,38 @@
 import logging
 import os
+import time
 import requests
 
 logger = logging.getLogger(__name__)
 
 PMS_BASE_URL = os.getenv("PMS_BACKEND_URL", "https://pms-backend-wp9b.onrender.com")
 _CACHED_TOKEN = None
+_LOCKOUT_UNTIL_TS = 0
+_LOCKOUT_REASON = ""
 
 def get_jwt_token():
     """
-    Authenticates against PMS Backend API using username/password (aarav / 123456).
+    Authenticates against PMS Backend API with lockout backoff safety.
+    Prioritizes static PMS_API_TOKEN if set in environment.
     """
-    global _CACHED_TOKEN
+    global _CACHED_TOKEN, _LOCKOUT_UNTIL_TS, _LOCKOUT_REASON
+
+    # 1. Use static JWT token if provided
+    static_token = os.getenv("PMS_API_TOKEN", "").strip()
+    if static_token:
+        return static_token, None
+
+    # 2. Return cached token if valid
     if _CACHED_TOKEN:
         return _CACHED_TOKEN, None
 
-    username = os.getenv("PMS_USERNAME", "aarav")
+    # 3. Check if server lockout window is active
+    current_time = time.time()
+    if current_time < _LOCKOUT_UNTIL_TS:
+        remaining_mins = int((_LOCKOUT_UNTIL_TS - current_time) / 60) + 1
+        return None, f"Account Lockout in Progress: Try again in {remaining_mins} minutes."
+
+    username = os.getenv("PMS_USERNAME", "aarav@grandpalace.in")
     password = os.getenv("PMS_PASSWORD", "123456")
 
     endpoint = f"{PMS_BASE_URL}/api/auth/login/"
@@ -38,10 +55,16 @@ def get_jwt_token():
             )
             if token:
                 _CACHED_TOKEN = token
+                _LOCKOUT_UNTIL_TS = 0
                 return _CACHED_TOKEN, None
             return None, f"HTTP {response.status_code}: Token missing in login response body."
         else:
-            return None, f"HTTP {response.status_code}: {response.text[:150]}"
+            resp_text = response.text[:150]
+            if "locked" in resp_text.lower():
+                # Back off for 10 minutes so lockout timer can count down to 0
+                _LOCKOUT_UNTIL_TS = time.time() + 600
+                _LOCKOUT_REASON = resp_text
+            return None, f"HTTP {response.status_code}: {resp_text}"
     except requests.exceptions.Timeout:
         return None, "Connection Timeout (5.0s limit exceeded while reaching auth server)."
     except requests.exceptions.RequestException as e:
