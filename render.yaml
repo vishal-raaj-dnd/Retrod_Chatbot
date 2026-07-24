@@ -9,6 +9,10 @@ services:
         generateValue: true
       - key: DEBUG
         value: "True"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: retrod-db
+          property: connectionString
       - key: GROQ_API_KEY
         sync: false
       - key: TWILIO_ACCOUNT_SID
@@ -17,3 +21,8 @@ services:
         sync: false
       - key: TWILIO_WHATSAPP_FROM
         value: "whatsapp:+14155238886"
+
+databases:
+  - name: retrod-db
+    databaseName: retrod_db
+    user: retrod_user
