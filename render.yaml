@@ -13,6 +13,12 @@ services:
         fromDatabase:
           name: retrod-db
           property: connectionString
+      - key: PMS_BACKEND_URL
+        value: "https://pms-backend-wp9b.onrender.com"
+      - key: PMS_USERNAME
+        value: "aarav"
+      - key: PMS_PASSWORD
+        value: "123456"
       - key: GROQ_API_KEY
         sync: false
       - key: TWILIO_ACCOUNT_SID
